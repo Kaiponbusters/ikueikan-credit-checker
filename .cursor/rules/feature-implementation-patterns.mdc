@@ -1,0 +1,240 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# 機能実装パターンガイド
+
+## 概要
+育英館大学単位管理システムにおける機能実装の成功パターンと注意点をまとめたガイドです。実際の開発経験から得られた知見を基に作成されています。
+
+## 🎯 系別機能実装パターン（2024年12月27日実装）
+
+### 実装の全体フロー
+1. **データ構造の分析** → カテゴリ構造の確認
+2. **ユーティリティ関数の作成** → データ処理ロジックの実装
+3. **型定義の拡張** → TypeScript型の更新
+4. **UI コンポーネントの拡張** → 表示機能の実装
+5. **検索機能の統合** → フィルタ機能の追加
+6. **メインページの更新** → プロップスの追加
+
+### 1. データ処理関数の実装パターン
+
+#### 抽出関数の作成
+```typescript
+// [utils.ts](mdc:app/lib/utils.ts) での実装例
+export function extractSystemFromCategory(category: string): string {
+  // カテゴリ名から英語部分を除去して系名のみを抽出
+  // 例: "情報・メディア系(Information and Media)" → "情報・メディア系"
+  const match = category.match(/^([^(]+)/);
+  return match ? match[1].trim() : category;
+}
+```
+
+#### 集計関数の作成
+```typescript
+// 系別の単位数を計算する関数
+export function calculateCreditsBySystem(courses: Course[], userCourses: UserCourse[]): Record<string, { completed: number; planned: number; courses: { completed: Course[]; planned: Course[] } }> {
+  const result: Record<string, { completed: number; planned: number; courses: { completed: Course[]; planned: Course[] } }> = {};
+
+  userCourses.forEach(uc => {
+    const course = courses.find(c => c.id === uc.courseId);
+    if (!course) return;
+
+    const systemName = extractSystemFromCategory(course.category);
+
+    if (!result[systemName]) {
+      result[systemName] = { 
+        completed: 0, 
+        planned: 0, 
+        courses: { completed: [], planned: [] }
+      };
+    }
+
+    if (uc.status === 'completed') {
+      result[systemName].completed += course.credits;
+      result[systemName].courses.completed.push(course);
+    } else if (uc.status === 'planned') {
+      result[systemName].planned += course.credits;
+      result[systemName].courses.planned.push(course);
+    }
+  });
+
+  return result;
+}
+```
+
+### 2. 型定義拡張パターン
+
+#### SearchFilter型の拡張
+```typescript
+// [types.ts](mdc:app/lib/types.ts) での実装例
+export interface SearchFilter {
+  keyword?: string;
+  instructor?: string;
+  year?: number;
+  term?: string;
+  category?: string;
+  system?: string;  // 新規追加
+  department?: string;
+  creditsMin?: number;
+  creditsMax?: number;
+  isRequired?: boolean;
+}
+```
+
+### 3. フィルタ機能統合パターン
+
+#### フィルタ関数の更新
+```typescript
+// [utils.ts](mdc:app/lib/utils.ts) での実装例
+export function filterCourses(courses: Course[], filter: SearchFilter): Course[] {
+  return courses.filter(course => {
+    // 既存のフィルタ処理...
+    
+    // 系で検索
+    if (filter.system) {
+      const systemName = extractSystemFromCategory(course.category);
+      if (systemName !== filter.system) {
+        return false;
+      }
+    }
+    
+    // その他のフィルタ処理...
+    return true;
+  });
+}
+```
+
+### 4. UI コンポーネント拡張パターン
+
+#### 展開/折りたたみ機能の実装
+```typescript
+// [CreditSummary.tsx](mdc:app/components/CreditSummary.tsx) での実装例
+const [expandedSystems, setExpandedSystems] = useState<Record<string, boolean>>({});
+
+const toggleSystemExpansion = (systemName: string) => {
+  setExpandedSystems(prev => ({
+    ...prev,
+    [systemName]: !prev[systemName]
+  }));
+};
+```
+
+#### パフォーマンス最適化
+```typescript
+// useMemoを使用した計算の最適化
+const systemCredits = useMemo(() => calculateCreditsBySystem(courses, userCourses), [courses, userCourses]);
+```
+
+#### 動的選択肢の生成
+```typescript
+// [CourseSearch.tsx](mdc:app/components/CourseSearch.tsx) での実装例
+const availableSystems = useMemo(() => {
+  const systems = new Set<string>();
+  courses.forEach(course => {
+    systems.add(extractSystemFromCategory(course.category));
+  });
+  return Array.from(systems).sort((a, b) => a.localeCompare(b, 'ja'));
+}, [courses]);
+```
+
+## 🔧 実装時の注意点
+
+### 1. 型安全性の確保
+- **必須**: 新しいフィルタフィールドを追加する際は、`SearchFilter`型を必ず更新
+- **推奨**: 型アサーションよりも適切な型定義を優先
+- **注意**: オプショナルプロパティは必ずnullチェックを実装
+
+### 2. パフォーマンス考慮
+- **必須**: 計算量の多い処理は`useMemo`でメモ化
+- **推奨**: 依存配列を適切に設定して不要な再計算を防ぐ
+- **注意**: 状態管理は必要最小限に留める
+
+### 3. UI/UX設計
+- **必須**: レスポンシブデザインを考慮
+- **推奨**: 色分けによる視覚的な区別（履修済み：緑、履修予定：青）
+- **注意**: 展開状態はローカル管理し、グローバル状態を汚染しない
+
+### 4. データ整合性
+- **必須**: JSONデータと型定義の整合性を保つ
+- **推奨**: データ変更時は影響範囲を事前に確認
+- **注意**: 既存機能への影響を最小限に抑える
+
+## 📋 実装チェックリスト
+
+### 新機能追加時
+- [ ] 必要な型定義を[types.ts](mdc:app/lib/types.ts)に追加
+- [ ] ユーティリティ関数を[utils.ts](mdc:app/lib/utils.ts)に実装
+- [ ] フィルタ機能が必要な場合は`SearchFilter`型を更新
+- [ ] `filterCourses()`関数にフィルタロジックを追加
+- [ ] UIコンポーネントでuseMemoを使用してパフォーマンス最適化
+- [ ] プロップスの型定義を適切に設定
+- [ ] レスポンシブデザインを考慮
+- [ ] TypeScriptビルドエラーがないことを確認
+- [ ] 既存機能への影響がないことを確認
+
+### データ処理関数作成時
+- [ ] 関数名は`calculate[Target]By[Axis]()`の命名規則に従う
+- [ ] 戻り値の型を明確に定義
+- [ ] エラーハンドリングを適切に実装
+- [ ] nullチェックを忘れずに実装
+- [ ] 日本語ロケールでのソートを考慮
+
+### UI コンポーネント拡張時
+- [ ] `'use client'`ディレクティブを設定
+- [ ] useState/useMemoを適切に使用
+- [ ] 展開/折りたたみ機能は統一されたパターンを使用
+- [ ] アイコンはLucide Reactから選択
+- [ ] カラーパレットは既存のものを使用
+- [ ] アクセシビリティを考慮
+
+## 🚨 よくある失敗パターンと対策
+
+### 1. 型定義の不整合
+**失敗例**: 新しいフィルタを追加したが`SearchFilter`型を更新し忘れ
+**対策**: 機能実装前に型定義の更新を必ず行う
+
+### 2. パフォーマンス問題
+**失敗例**: 重い計算処理をuseMemoなしで実装
+**対策**: 計算量の多い処理は必ずuseMemoでメモ化
+
+### 3. 既存機能への影響
+**失敗例**: 新機能追加時に既存のプロップスを変更
+**対策**: 既存のインターフェースを維持し、新しいプロップスを追加
+
+### 4. レスポンシブデザインの考慮不足
+**失敗例**: デスクトップでのみ動作確認
+**対策**: sm:, md:, lg:プレフィックスを使用してモバイル対応
+
+## 🎨 UI実装のベストプラクティス
+
+### 色分けパターン
+- **履修済み**: `text-green-600`, `bg-green-50`, `border-green-200`
+- **履修予定**: `text-blue-600`, `bg-blue-50`, `border-blue-200`
+- **エラー/警告**: `text-red-600`, `bg-red-50`, `border-red-200`
+
+### アイコン使用パターン
+- **履修済み**: `CheckCircle`
+- **履修予定**: `Clock`
+- **展開**: `ChevronDown`
+- **折りたたみ**: `ChevronUp`
+
+### レイアウトパターン
+- **カード形式**: `bg-white rounded-lg shadow-md p-6`
+- **ボーダー**: `border rounded-lg p-4`
+- **ホバー効果**: `hover:bg-gray-50 transition-colors`
+
+## 📈 今後の拡張可能性
+
+### 実装済みパターンの応用
+- **学年別集計**: `calculateCreditsByYear()`
+- **教員別集計**: `calculateCreditsByInstructor()`
+- **キャンパス別集計**: `calculateCreditsByCampus()`
+
+### UI パターンの再利用
+- 展開/折りたたみ機能は他の集計表示でも活用可能
+- 色分けパターンは状態表示全般で統一
+- フィルタパターンは新しい検索軸追加時に再利用
+
+この実装パターンガイドを参考に、一貫性のある高品質な機能実装を行ってください。

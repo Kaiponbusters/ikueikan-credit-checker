@@ -1,0 +1,171 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 育英館大学単位管理システム開発ガイド
+
+## プロジェクト概要
+このプロジェクトは育英館大学の学生向け単位管理システムです。学生が履修した科目と履修予定科目を管理し、卒業要件を満たしているかどうかをチェックできます。
+
+## 技術スタック
+- **フレームワーク**: Next.js 14 (App Router使用)
+- **言語**: TypeScript
+- **スタイリング**: Tailwind CSS
+- **アイコン**: Lucide React
+- **データ永続化**: ローカルストレージ
+- **バリデーション**: Zod
+
+## ディレクトリ構造
+```
+ikueikan-credit-checker/
+├── app/
+│   ├── api/scrape/          # シラバススクレイピングAPI
+│   ├── components/          # UIコンポーネント
+│   ├── lib/
+│   │   ├── data/           # サンプルデータ（JSON）
+│   │   ├── types.ts        # 型定義
+│   │   ├── utils.ts        # ユーティリティ関数
+│   │   ├── storage.ts      # ローカルストレージ管理
+│   │   └── simpleRequirementChecker.ts  # 卒業要件チェック
+│   ├── page.tsx            # メインページ
+│   └── layout.tsx          # レイアウト
+```
+
+## 主要コンポーネント
+- **[CourseSearch.tsx](mdc:app/components/CourseSearch.tsx)**: 科目検索機能（系別フィルタ対応）
+- **[CourseList.tsx](mdc:app/components/CourseList.tsx)**: 科目一覧表示・履修管理
+- **[CreditSummary.tsx](mdc:app/components/CreditSummary.tsx)**: 単位集計・進捗表示（系別表示対応）
+
+## 型定義の重要ポイント
+メイン型定義は[types.ts](mdc:app/lib/types.ts)に集約されています：
+- `Course`: 科目情報（ID、科目名、教員、単位数、カテゴリなど）
+- `UserCourse`: ユーザーの履修状況（completed, planned, in-progress）
+- `CreditSummary`: 単位集計結果
+- `GraduationRequirement`: 卒業要件定義
+- `SearchFilter`: 検索フィルタ（系別フィルタ含む）
+
+## データ管理
+- **科目データ**: [courses.json](mdc:app/lib/data/courses.json) - 実際の育英館大学科目データ
+    - データはスクレイピングで取得したものなので、内容については一切変更をしないこと。
+    - カテゴリ形式：「系名(英語名)」（例：「情報・メディア系(Information and Media)」）
+- **卒業要件**: [requirements.json](mdc:app/lib/data/requirements.json) - 学部の卒業要件
+- **ユーザーデータ**: ローカルストレージで永続化（[storage.ts](mdc:app/lib/storage.ts)で管理）
+
+### 🎯 系別機能の実装パターン
+2024年12月27日に実装された系別単位確認機能の知見：
+- **系名抽出**: `extractSystemFromCategory()`でカテゴリから系名を抽出
+- **系別集計**: `calculateCreditsBySystem()`で系別の単位数と科目一覧を計算
+- **フィルタ統合**: `SearchFilter`に`system`フィールドを追加し、検索機能と統合
+- **UI設計**: 展開/折りたたみ機能で詳細表示、色分けで履修状況を視覚化
+
+### ⚠️ 重要：データ構造と型定義の整合性
+2024年12月27日のバグ修正から得られた教訓：
+- JSONデータの構造変更時は必ず対応する型定義も更新する
+- `requirements.json`では`graduationRequirement`（単数形）を使用
+- `Course`型の`department`プロパティはオプショナル（`department?: string`）
+- 型アサーション（`as Course[]`）を使用してJSONデータの型問題を解決
+
+## 開発時の注意事項
+
+### 1. 型安全性の確保
+- すべてのコンポーネントでTypeScriptの型チェックを通すこと
+- `any`型の使用は避け、適切な型定義を行う
+- JSONデータと型定義の整合性を保つ
+- 新しいフィルタや機能追加時は`SearchFilter`型の更新を忘れずに
+
+### 2. コンポーネント設計原則
+- `'use client'`ディレクティブを使用してクライアントコンポーネントを明示
+- プロップスの型定義を必ず行う
+- 状態管理はuseStateとuseEffectを適切に使用
+- **新機能追加時**: 既存コンポーネントへの影響を最小限に抑える設計
+
+### 3. スタイリング規則
+- Tailwind CSSクラスを使用
+- レスポンシブデザインを考慮（sm:, md:, lg:プレフィックス使用）
+- カラーパレット：
+  - 主要色：blue-600, green-600, red-600
+  - グレースケール：gray-50〜gray-900
+- **系別表示**: 履修済み（緑）、履修予定（青）の色分けを統一
+
+### 4. データ処理
+- 科目データの処理は[utils.ts](mdc:app/lib/utils.ts)の関数を使用
+- ローカルストレージの操作は[storage.ts](mdc:app/lib/storage.ts)を経由
+- 卒業要件チェックは[simpleRequirementChecker.ts](mdc:app/lib/simpleRequirementChecker.ts)を使用
+- **系別処理**: `extractSystemFromCategory()`、`calculateCreditsBySystem()`を活用
+
+### 5. エラーハンドリング
+- APIコールは適切なtry-catchブロックで囲む
+- ユーザーフレンドリーなエラーメッセージを表示
+- ローディング状態を適切に管理
+
+## 機能拡張時のガイドライン
+
+### 新機能追加時
+1. [TODO.md](mdc:TODO.md)にTodoリストがあるので、それを確認する。
+2. 必要な型定義を[types.ts](mdc:app/lib/types.ts)に追加
+3. ユーティリティ関数が必要な場合は[utils.ts](mdc:app/lib/utils.ts)に追加
+4. 新しいコンポーネントは`app/components/`ディレクトリに作成
+5. APIが必要な場合は`app/api/`ディレクトリに追加
+6. [TODO.md](mdc:TODO.md)のTODOリストを更新する
+
+### 系別機能の拡張パターン
+- **新しい集計軸の追加**: `calculateCreditsBy[Axis]()`関数を作成
+- **フィルタ機能の拡張**: `SearchFilter`型にフィールド追加、`filterCourses()`関数を更新
+- **UI表示の追加**: 展開/折りたたみパターンを踏襲、useMemoでパフォーマンス最適化
+
+### データ構造変更時
+1. [courses.json](mdc:app/lib/data/courses.json)または[requirements.json](mdc:app/lib/data/requirements.json)を更新
+2. 対応する型定義を更新
+3. 影響を受けるコンポーネントを修正
+4. ストレージのデータバージョンを考慮
+
+## 特記事項
+- 日本語母語者は語学系A、非母語者は語学系Bを履修
+- 必修科目は`isRequired: true`で管理
+- 卒業に必要な総単位数は124単位
+- 年間履修制限は48単位（システムで警告表示）
+- **系別表示**: 日本語ロケールでソート、展開状態はローカル管理
+
+## 利用可能な系一覧
+現在のシステムで管理している学問分野（系）：
+- 人文科学系
+- 社会科学系
+- 自然科学系
+- 語学系A
+- 健康とスポーツ系
+- キャリアデザイン系
+- 情報・メディア系
+- 数理情報系
+
+## トラブルシューティング
+- 型エラーが発生した場合は、まず[types.ts](mdc:app/lib/types.ts)の型定義を確認
+- ローカルストレージの問題は開発者ツールでApplicationタブを確認
+- コンポーネントが表示されない場合は`'use client'`ディレクティブの有無を確認
+
+### 🔧 よく発生する問題と解決方法
+1. **Runtime Error: Cannot read properties of undefined (reading 'map')**
+   - 原因：JSONデータの参照エラー（`graduationRequirements` vs `graduationRequirement`）
+   - 解決：[page.tsx](mdc:app/page.tsx)でのデータ参照方法を確認
+   
+2. **TypeScript型エラー**
+   - 原因：JSONデータと型定義の不整合
+   - 解決：型アサーション（`as Type[]`）または型定義の修正
+   
+3. **ビルドエラー**
+   - 原因：競合する複数の要件チェッカーファイル
+   - 解決：使用しない`requirementChecker.ts`を無効化または削除
+
+4. **オプショナルプロパティの処理**
+   - `department`や`notes`などのオプショナルプロパティは必ずnullチェックを行う
+   - 例：`if (!course || !course.department) return;`
+
+5. **系別機能の問題**
+   - 系名が正しく抽出されない場合：`extractSystemFromCategory()`の正規表現を確認
+   - フィルタが効かない場合：`SearchFilter`型と`filterCourses()`関数の整合性を確認
+   - 表示が崩れる場合：レスポンシブデザインのクラス設定を確認
+
+## パフォーマンス最適化のポイント
+- `useMemo`を使用して計算量の多い処理をメモ化
+- 系別集計などの重い処理は依存配列を適切に設定
+- 展開/折りたたみ状態はローカル状態で管理し、不要な再計算を避ける

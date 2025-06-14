@@ -1,0 +1,87 @@
+{
+    "graduationRequirement": {
+      "totalCredits": 124,
+      "categories": [
+        {
+          "category": "情報メディア基礎・教養科目",
+          "minCredits": 40,
+          "isRequired": true,
+          "subcategories": [
+            {
+              "name": "人文科学系",
+              "minCredits": 1,
+              "requiredCredits": 0
+            },
+            {
+              "name": "社会科学系",
+              "minCredits": 4,
+              "requiredCredits": 4
+            },
+            {
+              "name": "自然科学系",
+              "minCredits": 4,
+              "requiredCredits": 4
+            },
+            {
+              "name": "語学系A",
+              "minCredits": 2,
+              "requiredCredits": 2
+            },
+            {
+              "name": "語学系B",
+              "minCredits": 8,
+              "requiredCredits": 8
+            },
+            {
+              "name": "健康とスポーツ系",
+              "minCredits": 1,
+              "requiredCredits": 0
+            },
+            {
+              "name": "キャリア・デザイン系",
+              "minCredits": 2,
+              "requiredCredits": 2
+            },
+            {
+              "name": "情報・メディア系",
+              "minCredits": 12,
+              "requiredCredits": 12
+            }
+          ]
+        },
+        {
+          "category": "専門科目",
+          "minCredits": 52,
+          "requiredCredits": 12,
+          "isRequired": true,
+          "subcategories": [
+            {
+              "name": "数理情報系",
+              "minCredits": 0,
+              "requiredCredits": 0
+            },
+            {
+              "name": "社会情報系",
+              "minCredits": 0,
+              "requiredCredits": 0
+            },
+            {
+              "name": "メディア表現系",
+              "minCredits": 0,
+              "requiredCredits": 0
+            },
+            {
+              "name": "総合系",
+              "minCredits": 12,
+              "requiredCredits": 12
+            }
+          ]
+        }
+      ]
+    },
+    "notes": [
+      "語学系必修単位について、日本語を母語とする場合は語学系Aを、日本語を母語としない場合は語学系Bを必修とします。",
+      "情報メディア基礎・教養科目については各系から1科目以上の単位取得を必要とします。",
+      "卒業時のGPAが1.0未満の者は卒業不可とする。"
+    ]
+  }

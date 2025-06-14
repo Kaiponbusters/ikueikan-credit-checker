@@ -1,0 +1,265 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# コーディング規約・ベストプラクティス
+
+## TypeScript規約
+
+### 1. 型定義
+- `interface`と`type`の使い分け：
+  - オブジェクトの形状を定義する場合は`interface`を使用
+  - Union型や関数型を定義する場合は`type`を使用
+- すべての関数にパラメータと戻り値の型を明示的に定義
+- `any`型の使用は禁止、どうしても必要な場合は`unknown`を使用
+
+#### ⚠️ 重要：JSONデータと型定義の整合性
+**2024年12月27日のバグ修正から得られた教訓**：
+- JSONファイルのプロパティ名と型定義は必ず一致させる
+- オプショナルプロパティ（`?:`）は実際のデータ構造に基づいて決定する
+- 型アサーション（`as Type[]`）はJSONインポート時に使用を検討
+- データ構造変更時は影響を受けるすべてのファイルを同時に修正
+
+```typescript
+// 例：オプショナルプロパティの適切な使用
+interface Course {
+  id: string;           // 必須
+  name: string;         // 必須
+  department?: string;  // オプショナル（JSONにない場合がある）
+}
+
+// JSONデータ使用時の型アサーション
+const courses = coursesData.courses as Course[];
+```
+
+#### nullチェックの徹底
+オプショナルプロパティを使用する際は、必ずnullチェックを実装する：
+```typescript
+// 悪い例
+result[course.department] = value; // department が undefined の場合エラー
+
+// 良い例
+if (course.department) {
+  result[course.department] = value;
+}
+```
+
+### 2. 命名規則
+- **ファイル名**: kebab-case（例：course-search.tsx）
+- **コンポーネント名**: PascalCase（例：CourseSearch）
+- **関数名・変数名**: camelCase（例：handleSubmit, userName）
+- **定数**: SCREAMING_SNAKE_CASE（例：MAX_CREDITS_PER_YEAR）
+- **型名**: PascalCase（例：Course, UserCourse）
+
+### 3. インポート順序
+```typescript
+// 1. React関連
+import { useState, useEffect } from 'react';
+
+// 2. 外部ライブラリ
+import { Search, Filter } from 'lucide-react';
+
+// 3. 内部のライブラリ・ユーティリティ
+import { Course, UserCourse } from '../lib/types';
+import { filterCourses } from '../lib/utils';
+
+// 4. 相対パスのコンポーネント
+import CourseItem from './CourseItem';
+```
+
+## React/Next.js規約
+
+### 1. コンポーネント設計
+- 1つのファイルには1つのコンポーネントのみ
+- プロップスが3つ以上の場合はinterfaceで定義
+- デフォルトエクスポートを使用
+
+### 2. Hooksの使用
+- useStateは関連する状態をグループ化
+- useEffectの依存配列を適切に設定
+- カスタムHooksは`use`プレフィックスを使用
+
+### 3. 条件付きレンダリング
+```typescript
+// 推奨：論理AND演算子
+{isVisible && <Component />}
+
+// 推奨：三項演算子（2択の場合）
+{isLoading ? <Spinner /> : <Content />}
+
+// 非推奨：複雑な条件
+{condition1 && condition2 && condition3 && <Component />}
+```
+
+## CSS/Tailwind規約
+
+### 1. クラス順序
+1. レイアウト（flex, grid, positionなど）
+2. サイズ（w-, h-, min-, maxなど）
+3. スペーシング（m-, p-など）
+4. 背景・ボーダー
+5. テキスト
+6. その他（hover, focusなど）
+
+### 2. レスポンシブデザイン
+- モバイルファーストで設計
+- ブレイクポイント：sm(640px), md(768px), lg(1024px), xl(1280px)
+
+### 3. カラーパレット
+```typescript
+// プライマリカラー
+'bg-blue-600' // メインアクション
+'bg-green-600' // 成功・完了
+'bg-red-600' // エラー・警告
+'bg-orange-600' // 注意
+
+// セカンダリカラー
+'bg-gray-50' // 背景
+'bg-gray-100' // カード背景
+'bg-gray-600' // テキスト
+'bg-gray-800' // 強調テキスト
+```
+
+## データ処理規約
+
+### 1. API呼び出し
+```typescript
+// 推奨：適切なエラーハンドリング
+try {
+  const response = await fetch('/api/endpoint');
+  if (!response.ok) {
+    throw new Error('API request failed');
+  }
+  const data = await response.json();
+  return data;
+} catch (error) {
+  console.error('Error:', error);
+  // ユーザーフレンドリーなエラー処理
+}
+```
+
+### 2. ローカルストレージ
+- 必ずtry-catchでエラーハンドリング
+- データのバージョン管理を行う
+- [storage.ts](mdc:app/lib/storage.ts)の関数を使用
+
+### 3. 状態管理
+```typescript
+// 推奨：関連する状態をまとめる
+const [filter, setFilter] = useState<SearchFilter>({});
+
+// 推奨：更新関数で前の状態を使用
+setFilter(prev => ({
+  ...prev,
+  keyword: newKeyword
+}));
+```
+
+## パフォーマンス規約
+
+### 1. useMemoとuseCallback
+```typescript
+// 計算量の多い処理をメモ化
+const expensiveValue = useMemo(() => {
+  return heavyCalculation(data);
+}, [data]);
+
+// 子コンポーネントに渡すコールバック関数をメモ化
+const handleClick = useCallback((id: string) => {
+  // 処理
+}, [dependency]);
+```
+
+### 2. 配列レンダリング
+```typescript
+// 必ずkeyを設定
+{items.map((item) => (
+  <Item key={item.id} data={item} />
+))}
+```
+
+## アクセシビリティ規約
+
+### 1. 基本的な要件
+- すべてのボタンに適切なaria-labelを設定
+- フォーム要素にはlabelを関連付け
+- キーボードナビゲーションをサポート
+
+### 2. セマンティックHTML
+```typescript
+// 推奨：適切なHTML要素を使用
+<button onClick={handleClick}>送信</button>
+<nav aria-label="メインナビゲーション">
+<main role="main">
+
+// 非推奨：divでボタンを作る
+<div onClick={handleClick}>送信</div>
+```
+
+## エラーハンドリング規約
+
+### 1. フロントエンド
+- ユーザーフレンドリーなメッセージを表示
+- 開発者用のログは console.error を使用
+- エラー境界（Error Boundary）の実装を検討
+
+### 2. バリデーション
+```typescript
+// Zodスキーマを使用したバリデーション
+import { z } from 'zod';
+
+const courseSchema = z.object({
+  id: z.string().min(1),
+  credits: z.number().min(1).max(10),
+});
+```
+
+## テスト規約
+
+### 1. ファイル命名
+- `ComponentName.test.tsx`
+- `utils.test.ts`
+
+### 2. テストケース
+- ハッピーパス（正常系）
+- エラーケース（異常系）
+- エッジケース（境界値）
+
+## コメント規約
+
+### 1. TypeScript型のコメント
+```typescript
+/**
+ * 科目情報を表すインターface
+ */
+interface Course {
+  /** 科目ID（例：LA-HU-110） */
+  id: string;
+  /** 科目名 */
+  name: string;
+}
+```
+
+### 2. 複雑なロジックのコメント
+```typescript
+// 日本語母語者は語学系A、非母語者は語学系Bを履修するため
+// 該当しない語学系の科目は単位計算から除外
+if (course.category === '語学系A' && !isJapaneseNative) return;
+```
+
+## Git規約
+
+### 1. コミットメッセージ
+```
+feat: 科目検索機能を追加
+fix: 単位計算のバグを修正
+docs: READMEを更新
+style: コードフォーマットを修正
+refactor: ユーティリティ関数を整理
+```
+
+### 2. ブランチ命名
+- `feature/add-course-search`
+- `fix/credit-calculation-bug`
+- `docs/update-readme`
