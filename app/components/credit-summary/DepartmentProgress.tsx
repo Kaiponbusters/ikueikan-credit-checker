@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Course, UserCourse } from '../lib/types';
-import { calculateCreditsByDepartment } from '../lib/utils';
+import { Course, UserCourse } from '../../lib/types';
+import { calculateCreditsByDepartment } from '../../lib/utils';
 
 interface DepartmentProgressProps {
   courses: Course[];

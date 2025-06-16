@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { Book } from 'lucide-react';
-import { Course, UserCourse } from '../lib/types';
-import { getUserCourseStatus, sortCourses } from '../lib/utils';
+import { Course, UserCourse } from '../../lib/types';
+import { getUserCourseStatus, sortCourses } from '../../lib/utils';
 import CourseListHeader from './CourseListHeader';
 import CourseItem from './CourseItem';
 

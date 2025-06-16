@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertCircle } from 'lucide-react';
-import { CreditSummary as CreditSummaryType } from '../lib/types';
+import { CreditSummary as CreditSummaryType } from '../../lib/types';
 
 interface WarningsSectionProps {
   summary: CreditSummaryType;

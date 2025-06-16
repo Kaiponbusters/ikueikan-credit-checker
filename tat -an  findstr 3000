@@ -1,0 +1,2 @@
+[33m77c9a11[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m feat: サーバー重複起動防止ルールをE2Eテスト規約に追加 - netstatによる事前確認の義務化 - 条件付きnpm run dev実行の徹底 - Playwrightテスト品質向上のためのサーバー管理ベストプラクティス追加 - 複数サーバーインスタンス起動の防止
+[33mb31198d[m feat: 開発プロセス品質管理の強化とコンポーネント設計改善 - Cursor RuleにGitコミット要件とE2Eテスト実行ルールを追加 - CourseListコンポーネントを247行から67行に削減（73%減） - 関心の分離でCourseItem、CourseListHeaderに分割 - ソート機能をutils.tsに移動、useMemoで最適化 - requirementChecker.ts重複ファイル削除 - MCP利用ルール策定（mcpuse-rule.mdc）

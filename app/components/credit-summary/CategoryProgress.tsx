@@ -1,7 +1,7 @@
 'use client';
 
-import { CreditSummary as CreditSummaryType } from '../lib/types';
-import { getProgressColor, getProgressPercentage } from '../lib/utils';
+import { CreditSummary as CreditSummaryType } from '../../lib/types';
+import { getProgressColor, getProgressPercentage } from '../../lib/utils';
 
 interface CategoryProgressProps {
   summary: CreditSummaryType;

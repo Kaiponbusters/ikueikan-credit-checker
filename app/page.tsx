@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { GraduationCap, Download, Upload, RefreshCw } from 'lucide-react';
-import CourseSearch from './components/CourseSearch';
-import CourseList from './components/CourseList';
-import CreditSummary from './components/CreditSummary';
+import { CourseSearch } from './components/course-search';
+import { CourseList } from './components/course-list';
+import { CreditSummary } from './components/credit-summary';
 import { Course, UserCourse, SearchFilter, CreditSummary as CreditSummaryType } from './lib/types';
 import { filterCourses, sortCourses } from './lib/utils';
 import { loadUserData, saveUserData, addUserCourse, removeUserCourse, updateUserCourseStatus, exportUserData, importUserData } from './lib/storage';

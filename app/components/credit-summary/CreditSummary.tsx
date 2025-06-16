@@ -1,6 +1,6 @@
 'use client';
 
-import { Course, UserCourse, CreditSummary as CreditSummaryType } from '../lib/types';
+import { Course, UserCourse, CreditSummary as CreditSummaryType } from '../../lib/types';
 import OverallProgress from './OverallProgress';
 import CategoryProgress from './CategoryProgress';
 import SystemProgress from './SystemProgress';

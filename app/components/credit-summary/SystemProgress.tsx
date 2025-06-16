@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { CheckCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
-import { Course, UserCourse } from '../lib/types';
-import { calculateCreditsBySystem } from '../lib/utils';
+import { Course, UserCourse } from '../../lib/types';
+import { calculateCreditsBySystem } from '../../lib/utils';
 
 interface SystemProgressProps {
   courses: Course[];

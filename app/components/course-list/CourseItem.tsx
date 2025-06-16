@@ -1,8 +1,8 @@
 'use client';
 
 import { User, Calendar, Clock, Award, Plus, Check, BookOpen } from 'lucide-react';
-import { Course, UserCourse } from '../lib/types';
-import { getCategoryColor, getStatusText } from '../lib/utils';
+import { Course, UserCourse } from '../../lib/types';
+import { getCategoryColor, getStatusText } from '../../lib/utils';
 
 interface CourseItemProps {
   course: Course;

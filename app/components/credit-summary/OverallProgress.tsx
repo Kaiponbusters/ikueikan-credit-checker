@@ -1,8 +1,8 @@
 'use client';
 
 import { Award, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import { CreditSummary as CreditSummaryType } from '../lib/types';
-import { getProgressColor, getProgressPercentage } from '../lib/utils';
+import { CreditSummary as CreditSummaryType } from '../../lib/types';
+import { getProgressColor, getProgressPercentage } from '../../lib/utils';
 
 interface OverallProgressProps {
   summary: CreditSummaryType;
