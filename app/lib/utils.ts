@@ -87,8 +87,31 @@ export function filterCourses(courses: Course[], filter: SearchFilter): Course[]
   });
 }
 
-// 科目をソートする関数
-export function sortCourses(courses: Course[], sortBy: 'name' | 'instructor' | 'credits' | 'year' | 'term' = 'name', order: 'asc' | 'desc' = 'asc'): Course[] {
+// 履修ステータスのテキストを取得する関数
+export function getStatusText(status: UserCourse['status']): string {
+  switch (status) {
+    case 'completed':
+      return '履修済み';
+    case 'planned':
+      return '履修予定';
+    case 'in-progress':
+      return '履修中';
+    default:
+      return '';
+  }
+}
+
+// ソート機能
+
+type SortField = 'name' | 'instructor' | 'credits' | 'year' | 'term';
+type SortOrder = 'asc' | 'desc';
+
+// 科目配列をソートする関数
+export function sortCourses(
+  courses: Course[], 
+  sortBy: SortField, 
+  sortOrder: SortOrder
+): Course[] {
   return [...courses].sort((a, b) => {
     let comparison = 0;
 
@@ -109,11 +132,9 @@ export function sortCourses(courses: Course[], sortBy: 'name' | 'instructor' | '
         const termOrder = ['前期', '後期', '通年', '集中'];
         comparison = termOrder.indexOf(a.term) - termOrder.indexOf(b.term);
         break;
-      default:
-        comparison = 0;
     }
 
-    return order === 'asc' ? comparison : -comparison;
+    return sortOrder === 'asc' ? comparison : -comparison;
   });
 }
 
@@ -381,4 +402,36 @@ export function formatFileSize(bytes: number): string {
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// UI関連のヘルパー関数 - CreditSummaryコンポーネント用
+
+// 進捗バーの色を取得する関数
+export function getProgressColor(completed: number, required: number): string {
+  const percentage = (completed / required) * 100;
+  if (percentage >= 100) return 'bg-green-500';
+  if (percentage >= 75) return 'bg-blue-500';
+  if (percentage >= 50) return 'bg-yellow-500';
+  return 'bg-red-500';
+}
+
+// 進捗率を計算する関数
+export function getProgressPercentage(completed: number, required: number): number {
+  return Math.min(100, (completed / required) * 100);
+}
+
+// CourseList用のUIヘルパー関数
+
+// 科目カテゴリに応じた色クラスを取得する関数
+export function getCategoryColor(category: string): string {
+  switch (category) {
+    case '必修':
+      return 'bg-red-100 text-red-800 border-red-200';
+    case '選択必修':
+      return 'bg-orange-100 text-orange-800 border-orange-200';
+    case '選択':
+      return 'bg-green-100 text-green-800 border-green-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
 }

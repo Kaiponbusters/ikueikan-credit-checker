@@ -3,7 +3,15 @@
 import { useMemo, useState } from 'react';
 import { Award, TrendingUp, CheckCircle, Clock, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Course, UserCourse, CreditSummary as CreditSummaryType } from '../lib/types';
-import { calculateCompletedCredits, calculatePlannedCredits, calculateCreditsByCategory, calculateCreditsByDepartment, calculateCreditsBySystem } from '../lib/utils';
+import { 
+  calculateCompletedCredits, 
+  calculatePlannedCredits, 
+  calculateCreditsByCategory, 
+  calculateCreditsByDepartment, 
+  calculateCreditsBySystem,
+  getProgressColor,
+  getProgressPercentage
+} from '../lib/utils';
 
 interface CreditSummaryProps {
   courses: Course[];
@@ -23,18 +31,6 @@ export default function CreditSummary({ courses, userCourses, summary }: CreditS
       ...prev,
       [systemName]: !prev[systemName]
     }));
-  };
-
-  const getProgressColor = (completed: number, required: number) => {
-    const percentage = (completed / required) * 100;
-    if (percentage >= 100) return 'bg-green-500';
-    if (percentage >= 75) return 'bg-blue-500';
-    if (percentage >= 50) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
-  const getProgressPercentage = (completed: number, required: number) => {
-    return Math.min(100, (completed / required) * 100);
   };
 
   return (

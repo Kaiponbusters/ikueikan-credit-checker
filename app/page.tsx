@@ -54,8 +54,7 @@ export default function Home() {
   const handleSearch = (filter: SearchFilter) => {
     setCurrentFilter(filter);
     const filtered = filterCourses(courses, filter);
-    const sorted = sortCourses(filtered);
-    setFilteredCourses(sorted);
+    setFilteredCourses(filtered);
   };
 
   // 検索リセット
