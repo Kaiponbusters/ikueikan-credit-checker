@@ -1,0 +1,273 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# UIデザインパターン・スタイリングルール
+
+## Tailwind CSSクラス体系
+
+### カラーパレット統一
+```css
+/* プライマリカラー */
+bg-blue-600    /* メインアクション・検索 */
+bg-green-600   /* 成功・履修済み */
+bg-red-600     /* エラー・警告 */
+bg-orange-600  /* 注意・履修予定 */
+
+/* セカンダリカラー */
+bg-gray-50     /* 背景 */
+bg-gray-100    /* カード背景 */
+bg-gray-600    /* テキスト */
+bg-gray-800    /* 強調テキスト */
+```
+
+### 状態別カラー分類
+```css
+/* 履修状況の色分け */
+text-green-600, bg-green-50, border-green-200  /* 履修済み */
+text-blue-600, bg-blue-50, border-blue-200     /* 履修予定 */
+text-red-600, bg-red-50, border-red-200        /* エラー・警告 */
+text-gray-600, bg-gray-50, border-gray-200     /* 未履修・デフォルト */
+```
+
+## レスポンシブデザインパターン
+
+### ブレイクポイント戦略
+```css
+/* モバイルファースト設計 */
+sm:   /* 640px以上 - タブレット */
+md:   /* 768px以上 - 小型デスクトップ */
+lg:   /* 1024px以上 - デスクトップ */
+xl:   /* 1280px以上 - 大型デスクトップ */
+```
+
+### グリッドレイアウトパターン
+```css
+/* 基本パターン */
+grid grid-cols-1 md:grid-cols-2          /* モバイル1列、デスクトップ2列 */
+grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  /* レスポンシブ3列 */
+
+/* 系別表示の例 */
+grid grid-cols-1 md:grid-cols-2 gap-4   /* 系別進捗表示 */
+```
+
+## コンポーネントスタイリングパターン
+
+### カード形式の基本スタイル
+```css
+/* 標準カード */
+bg-white rounded-lg shadow-md p-6
+
+/* ボーダーカード */
+border rounded-lg p-4
+
+/* ホバーエフェクト付きカード */
+bg-white rounded-lg shadow-md p-6 hover:bg-gray-50 transition-colors
+```
+
+### ボタンスタイリングパターン
+```css
+/* プライマリボタン */
+bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700
+
+/* セカンダリボタン */
+bg-gray-200 text-gray-800 rounded-lg px-4 py-2 hover:bg-gray-300
+
+/* アクションボタン（小） */
+px-3 py-2 text-sm rounded-lg
+```
+
+## アイコン使用パターン
+
+### Lucide Reactアイコンの統一使用
+```typescript
+// 機能別アイコン定義
+CheckCircle     // 履修済み・完了
+Clock          // 履修予定・進行中  
+Award          // 単位・成績
+Search         // 検索機能
+Filter         // フィルタ機能
+ChevronDown    // 展開
+ChevronUp      // 折りたたみ
+AlertCircle    // 警告・注意
+```
+
+### アイコンサイズの統一
+```css
+w-4 h-4   /* 小アイコン（ボタン内等） */
+w-5 h-5   /* 標準アイコン（見出し等） */  
+w-8 h-8   /* 大アイコン（ヘッダー等） */
+```
+
+## 展開/折りたたみUIパターン
+
+### 実装パターン
+```typescript
+// 状態管理
+const [expandedSystems, setExpandedSystems] = useState<Record<string, boolean>>({});
+
+// トグル関数
+const toggleSystemExpansion = useCallback((systemName: string) => {
+  setExpandedSystems(prev => ({
+    ...prev,
+    [systemName]: !prev[systemName]
+  }));
+}, []);
+
+// UI表示
+{expandedSystems[systemName] ? (
+  <ChevronUp className="w-4 h-4" />
+) : (
+  <ChevronDown className="w-4 h-4" />
+)}
+```
+
+### スタイリング統一
+```css
+/* 展開可能セクションヘッダー */
+flex justify-between items-center cursor-pointer p-3 hover:bg-gray-50
+
+/* 展開コンテンツ */
+mt-2 space-y-2 pl-4 border-l-2 border-gray-200
+```
+
+## フォームスタイリングパターン
+
+### 入力フィールドの統一スタイル
+```css
+/* テキスト入力 */
+w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+
+/* セレクトボックス */
+w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500
+
+/* チェックボックス */
+w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500
+```
+
+### フォームレイアウトパターン
+```css
+/* 基本検索フィールド */
+grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4
+
+/* 詳細検索フィールド */
+space-y-4
+
+/* フォームアクション */
+flex gap-2 justify-end
+```
+
+## 進捗表示パターン
+
+### プログレスバーのスタイリング
+```css
+/* 背景バー */
+w-full bg-gray-200 rounded-full h-2
+
+/* 進捗バー（状態別） */
+bg-green-600 h-2 rounded-full    /* 完了済み */
+bg-blue-600 h-2 rounded-full     /* 進行中 */
+bg-orange-600 h-2 rounded-full   /* 注意が必要 */
+```
+
+### 進捗テキスト表示
+```css
+/* 数値表示 */
+text-2xl font-bold text-green-600 mb-1   /* メイン数値 */
+text-sm text-gray-600                    /* 補助テキスト */
+
+/* パーセンテージ表示 */
+text-lg font-semibold text-blue-600      /* 進捗率 */
+```
+
+## リスト表示パターン
+
+### 科目リストのスタイリング
+```css
+/* リストコンテナ */
+space-y-4
+
+/* 科目アイテム */
+bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow
+
+/* 科目情報レイアウト */
+flex justify-between items-start
+```
+
+### ヘッダー・ソート機能
+```css
+/* ソート可能ヘッダー */
+flex items-center gap-1 cursor-pointer hover:text-blue-600
+
+/* ソートインジケーター */
+w-4 h-4 text-gray-400
+```
+
+## エラー・警告表示パターン
+
+### 警告セクションのスタイリング
+```css
+/* エラーレベル別 */
+bg-red-50 border-l-4 border-red-400     /* エラー */
+bg-yellow-50 border-l-4 border-yellow-400  /* 警告 */
+bg-blue-50 border-l-4 border-blue-400      /* 情報 */
+
+/* 警告内容 */
+p-3 rounded-lg
+```
+
+## アニメーション・トランジション
+
+### 基本トランジション
+```css
+transition-colors       /* 色変化 */
+transition-shadow       /* 影変化 */  
+transition-transform    /* 変形 */
+transition-all          /* 全般（控えめに使用） */
+```
+
+### ホバーエフェクト
+```css
+/* カードホバー */
+hover:shadow-md transition-shadow
+
+/* ボタンホバー */
+hover:bg-blue-700 transition-colors
+
+/* テキストホバー */
+hover:text-blue-600 transition-colors
+```
+
+## アクセシビリティ考慮
+
+### セマンティックHTML要素
+```html
+<button>     <!-- ボタン操作 -->
+<nav>        <!-- ナビゲーション -->
+<main>       <!-- メインコンテンツ -->
+<section>    <!-- セクション分割 -->
+<article>    <!-- 独立したコンテンツ -->
+```
+
+### フォーカス表示
+```css
+focus:ring-2 focus:ring-blue-500 focus:outline-none
+```
+
+## モバイル最適化
+
+### タッチフレンドリーサイズ
+```css
+/* 最小タッチターゲット：44px */
+min-h-[44px] min-w-[44px]
+
+/* モバイル用パディング調整 */
+px-4 py-3 sm:px-6 sm:py-4
+```
+
+### モバイル専用表示制御
+```css
+block md:hidden        /* モバイルのみ表示 */
+hidden md:block        /* デスクトップのみ表示 */
+```

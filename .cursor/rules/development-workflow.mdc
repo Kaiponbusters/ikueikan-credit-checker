@@ -1,0 +1,166 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# 開発ワークフロー・品質管理ルール
+
+## 必須開発フロー
+
+### コード変更後の必須手順
+1. **TypeScriptビルドテスト**: `npm run build`
+2. **サーバー状態確認**: `netstat -an | findstr :3000`
+3. **E2Eテスト実行**: Playwright MCPでの動作確認
+4. **Gitコミット**: 意味のあるコミットメッセージで記録
+
+### サーバー管理のベストプラクティス
+```bash
+# サーバー重複起動防止の確認
+netstat -an | findstr :3000
+
+# 既に起動している場合は重複起動を避ける
+# 未起動の場合のみ以下を実行
+npm run dev
+```
+
+## コミット規則
+
+### コミットメッセージの形式
+```
+<type>: <簡潔な説明>
+
+<詳細な説明（オプション）>
+- 変更内容の詳細
+- 影響範囲
+- パフォーマンス改善等
+```
+
+### タイプの定義
+- **feat**: 新機能追加
+- **fix**: バグ修正
+- **refactor**: リファクタリング
+- **style**: コードフォーマット修正
+- **docs**: ドキュメント更新
+- **test**: テスト追加・修正
+
+### 成功事例
+```
+feat: コンポーネント機能別ディレクトリ構造の実装 - course-search, course-list, credit-summaryに分類してNext.jsベストプラクティスに準拠
+
+refactor: CreditSummaryコンポーネントのリファクタリング - 316行から5つの小さなコンポーネントに分割して関心の分離を実現
+```
+
+## 品質チェックリスト
+
+### コンポーネント修正時
+- [ ] TypeScriptビルドエラーがない
+- [ ] インポートパスが正しく設定されている
+- [ ] useMemoでパフォーマンス最適化済み
+- [ ] プロップス型定義が適切
+- [ ] 既存機能への影響がない
+
+### 新機能追加時
+- [ ] 適切なディレクトリ構造で配置
+- [ ] index.tsでエクスポート管理
+- [ ] 型定義を[types.ts](mdc:app/lib/types.ts)に追加
+- [ ] ユーティリティ関数を[utils.ts](mdc:app/lib/utils.ts)に追加
+- [ ] 関心の分離が適切に実装されている
+
+## テスト戦略
+
+### Playwright MCPテストパターン
+```typescript
+// 1. 基本機能テスト
+- ページロード確認
+- 科目検索機能（キーワード入力、結果表示）
+- ソート機能（並び順変更）
+
+// 2. 履修管理テスト
+- 科目の履修済み登録
+- ステータス変更（履修予定 ↔ 履修済み）
+- 履修削除
+
+// 3. 単位進捗テスト
+- 履修済み科目の単位反映
+- 系別集計の正確性
+- 進捗率計算
+
+// 4. UI/UXテスト
+- レスポンシブデザイン（375px, 768px, 1024px）
+- 展開・折りたたみ機能
+- ホバーエフェクト
+```
+
+### サーバー重複起動防止
+**重要**: 複数のサーバーインスタンスの同時起動はPlaywrightテストの不具合を引き起こすため、必ず事前確認を行う
+
+## エラー対応パターン
+
+### よくある問題と解決方法
+
+#### 1. Webpackランタイムエラー
+```bash
+# 症状: "Cannot find module './447.js'"
+# 解決方法:
+Remove-Item -Recurse -Force .next
+npm run build
+npm run dev
+```
+
+#### 2. 型エラー: インポートパス不整合
+```typescript
+// 問題: 相対パスが不正
+import { Component } from '../lib/types';
+
+// 解決: 適切な相対パス
+import { Component } from '../../lib/types';
+```
+
+#### 3. コンポーネントが表示されない
+- `'use client'`ディレクティブの確認
+- エクスポート方式の確認（default export）
+- インポートパスの確認
+
+## パフォーマンス監視
+
+### 計算量の多い処理の最適化
+```typescript
+// 系別集計の例
+const systemCredits = useMemo(() => 
+  calculateCreditsBySystem(courses, userCourses), 
+  [courses, userCourses]
+);
+
+// フィルタ処理の例
+const filteredCourses = useMemo(() => 
+  filterCourses(courses, filter), 
+  [courses, filter]
+);
+```
+
+### 状態管理の最適化
+```typescript
+// 展開状態のローカル管理
+const [expandedSystems, setExpandedSystems] = useState<Record<string, boolean>>({});
+
+const toggleSystemExpansion = useCallback((systemName: string) => {
+  setExpandedSystems(prev => ({
+    ...prev,
+    [systemName]: !prev[systemName]
+  }));
+}, []);
+```
+
+## レガシーコード対応
+
+### 大きなコンポーネントの分割指針
+1. **責務の特定**: 各機能の役割を明確化
+2. **依存関係の分析**: プロップスと状態の流れを把握
+3. **段階的分割**: 一度に全てを変更せず、段階的にリファクタリング
+4. **テストでの検証**: 各段階で動作確認
+
+### 成功パターン: CreditSummary.tsx
+- 316行 → 17行（メイン） + 5つの専門コンポーネント
+- 各コンポーネントが明確な責務を持つ
+- パフォーマンス最適化（useMemo）の活用
+- 型安全性の確保
