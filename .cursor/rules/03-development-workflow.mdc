@@ -1,7 +1,7 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
 # 開発ワークフロー・品質管理ルール
 
@@ -164,3 +164,72 @@ const toggleSystemExpansion = useCallback((systemName: string) => {
 - 各コンポーネントが明確な責務を持つ
 - パフォーマンス最適化（useMemo）の活用
 - 型安全性の確保
+
+## 継続的インテグレーション
+
+### GitHub Actions推奨設定
+```yaml
+name: Quality Check
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - name: Install dependencies
+        run: npm ci
+      - name: TypeScript check
+        run: npm run build
+      - name: E2E tests
+        run: npm run test:e2e
+```
+
+### 自動品質チェック
+- TypeScriptコンパイルエラーの検出
+- ESLintルールの適用
+- Prettierフォーマットチェック
+- E2Eテスト実行
+
+## メトリクス監視
+
+### パフォーマンス指標
+- First Contentful Paint (FCP)
+- Largest Contentful Paint (LCP)
+- First Input Delay (FID)
+- Cumulative Layout Shift (CLS)
+
+### 品質指標
+- TypeScriptカバレッジ
+- コンポーネントサイズ（行数）
+- 関数の複雑度
+- テストカバレッジ
+
+## ドキュメント管理
+
+### README更新タイミング
+- 新機能追加時
+- 環境設定変更時
+- デプロイ手順変更時
+- 依存関係更新時
+
+### コードドキュメント
+- JSDocコメントの記述
+- 型定義の説明
+- 複雑なロジックの説明
+- APIエンドポイントの説明
+
+## セキュリティ対策
+
+### データ保護
+- ローカルストレージの適切な利用
+- 機密情報の環境変数化
+- XSS対策の実装
+- CSRF対策の実装
+
+### 依存関係管理
+- セキュリティアップデートの定期実行
+- 脆弱性スキャンの実行
+- 不要な依存関係の削除
+- ライセンス互換性の確認

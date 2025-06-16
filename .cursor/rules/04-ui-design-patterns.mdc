@@ -1,7 +1,7 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
 # UIデザインパターン・スタイリングルール
 
@@ -255,19 +255,54 @@ hover:text-blue-600 transition-colors
 focus:ring-2 focus:ring-blue-500 focus:outline-none
 ```
 
-## モバイル最適化
+## ダークモード対応（将来拡張）
 
-### タッチフレンドリーサイズ
+### カラートークン設計
 ```css
-/* 最小タッチターゲット：44px */
-min-h-[44px] min-w-[44px]
+/* ライトモード */
+--bg-primary: #ffffff;
+--text-primary: #1f2937;
 
-/* モバイル用パディング調整 */
-px-4 py-3 sm:px-6 sm:py-4
+/* ダークモード */
+dark:bg-gray-900 dark:text-white
 ```
 
-### モバイル専用表示制御
+## モバイル最適化
+
+### タッチターゲット
 ```css
-block md:hidden        /* モバイルのみ表示 */
-hidden md:block        /* デスクトップのみ表示 */
+/* 最小タッチターゲットサイズ */
+min-h-[44px] min-w-[44px]
+
+/* モバイル専用スタイル */
+sm:hidden /* スマートフォンで非表示 */
+sm:block  /* スマートフォンで表示 */
+```
+
+### スワイプジェスチャー対応
+```css
+/* 横スクロール対応 */
+overflow-x-auto
+scrollbar-hide
+```
+
+## パフォーマンス最適化
+
+### CSS最適化
+```css
+/* 効率的なセレクタ */
+.course-item > .header /* 直接の子要素 */
+
+/* アニメーション最適化 */
+will-change: transform
+transform: translateZ(0) /* ハードウェアアクセラレーション */
+```
+
+### レンダリング最適化
+```typescript
+// CSS-in-JSの最適化
+const memoizedStyles = useMemo(() => ({
+  container: 'bg-white rounded-lg shadow-md',
+  header: 'flex justify-between items-center'
+}), []);
 ```

@@ -1,0 +1,396 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# データ管理・型安全性ガイド
+
+## 型定義管理
+
+### メイン型定義の場所
+すべての型定義は[types.ts](mdc:app/lib/types.ts)に集約して管理：
+
+```typescript
+// 主要な型定義
+- Course: 科目情報
+- UserCourse: ユーザーの履修状況  
+- CreditSummary: 単位集計結果
+- GraduationRequirement: 卒業要件定義
+- SearchFilter: 検索フィルタ（系別フィルタ含む）
+```
+
+### 🛡️ 型安全性の重要性
+このガイドは2024年12月27日に発生したRuntime Errorの修正経験を基に作成されました。型の不整合によるランタイムエラーを防ぐための具体的な指針を提供します。
+
+### 📋 必須チェックリスト
+
+#### JSONデータとTypeScript型の整合性
+- [ ] [courses.json](mdc:app/lib/data/courses.json)の構造と[types.ts](mdc:app/lib/types.ts)の`Course`型が一致している
+- [ ] [requirements.json](mdc:app/lib/data/requirements.json)の構造と要件チェッカーの期待する型が一致している
+- [ ] オプショナルプロパティ（`?:`）が実際のデータ構造を正確に反映している
+- [ ] 型アサーション（`as Type[]`）がJSONインポート時に適切に使用されている
+
+#### 関数レベルでの型安全性
+- [ ] すべての関数パラメータに型注釈が設定されている
+- [ ] すべての関数の戻り値型が明示されている
+- [ ] オプショナルパラメータの処理でnullチェックが実装されている
+- [ ] 配列操作（map, filter等）前に配列の存在確認をしている
+
+### 🚨 よくある型エラーパターンと対処法
+
+#### 1. JSONデータ参照エラー
+```typescript
+// ❌ 危険：JSONの構造を仮定したアクセス
+const requirements = requirementsData.graduationRequirements; // undefined になる可能性
+
+// ✅ 安全：実際のJSON構造に基づくアクセス
+const requirements = requirementsData.graduationRequirement;
+```
+
+#### 2. オプショナルプロパティの不適切な処理
+```typescript
+// ❌ 危険：オプショナルプロパティの直接使用
+function processCourse(course: Course) {
+  return course.department.toLowerCase(); // department が undefined の場合エラー
+}
+
+// ✅ 安全：nullチェック付きの処理
+function processCourse(course: Course) {
+  return course.department?.toLowerCase() || 'unknown';
+}
+```
+
+#### 3. 配列操作時の未定義チェック不足
+```typescript
+// ❌ 危険：配列の存在を仮定した操作
+requirements.map(req => processRequirement(req)); // requirements が undefined の場合エラー
+
+// ✅ 安全：存在確認付きの操作
+requirements?.map(req => processRequirement(req)) || [];
+```
+
+## データファイル管理
+
+### 科目データ
+[courses.json](mdc:app/lib/data/courses.json)
+- **重要**: スクレイピングで取得したデータのため内容は変更禁止
+- カテゴリ形式：「系名(英語名)」（例：「情報・メディア系(Information and Media)」）
+- 系名抽出には`extractSystemFromCategory()`関数を使用
+
+### 卒業要件データ  
+[requirements.json](mdc:app/lib/data/requirements.json)
+- プロパティ名：`graduationRequirement`（単数形）
+- **注意**: `graduationRequirements`（複数形）ではない
+
+### ユーザーデータ
+- ローカルストレージで永続化
+- [storage.ts](mdc:app/lib/storage.ts)で管理
+- データバージョン管理を実装
+
+## 🔧 実装パターン
+
+### JSONデータの安全な読み込み
+```typescript
+// ファイル：page.tsx
+import coursesData from './lib/data/courses.json';
+
+// 型アサーションで型安全性を確保
+const [courses] = useState<Course[]>(coursesData.courses as Course[]);
+```
+
+### 型ガードの活用
+```typescript
+// 型ガード関数の例
+function isCourse(obj: any): obj is Course {
+  return obj && 
+         typeof obj.id === 'string' && 
+         typeof obj.name === 'string' &&
+         typeof obj.credits === 'number';
+}
+
+// 使用例
+if (isCourse(data)) {
+  // data は Course 型として安全に使用可能
+  console.log(data.credits);
+}
+```
+
+### 安全な配列処理
+```typescript
+// 安全な配列操作のパターン
+function processUserCourses(courses: Course[], userCourses: UserCourse[]): ProcessedCourse[] {
+  if (!courses || !userCourses) {
+    return [];
+  }
+  
+  return userCourses
+    .map(uc => {
+      const course = courses.find(c => c.id === uc.courseId);
+      if (!course) return null; // 見つからない場合の安全な処理
+      
+      return {
+        ...course,
+        status: uc.status
+      };
+    })
+    .filter((course): course is ProcessedCourse => course !== null); // 型ガードでnullを除外
+}
+```
+
+## データ処理関数の命名規則
+
+### 計算関数の命名パターン
+```typescript
+// パターン: calculate[Target]By[Axis]()
+calculateCreditsBySystem()      // 系別単位計算
+calculateCreditsByDepartment()  // 学部別単位計算  
+calculateCreditsByCategory()    // カテゴリ別単位計算
+```
+
+### 抽出関数の命名パターン
+```typescript
+// パターン: extract[Target]From[Source]()
+extractSystemFromCategory()     // カテゴリから系名を抽出
+extractYearFromCourseId()      // 科目IDから年度を抽出
+```
+
+### フィルタ関数の命名パターン
+```typescript
+// パターン: filter[Target]By[Condition]()
+filterCourses()                // 科目のフィルタリング
+filterUserCoursesByStatus()    // ステータス別履修科目フィルタ
+```
+
+## 系別機能のデータ処理パターン
+
+### 系名抽出の実装
+```typescript
+export function extractSystemFromCategory(category: string): string {
+  // カテゴリ名から英語部分を除去して系名のみを抽出
+  const match = category.match(/^([^(]+)/);
+  return match ? match[1].trim() : category;
+}
+```
+
+### 系別集計の実装パターン
+```typescript
+export function calculateCreditsBySystem(courses: Course[], userCourses: UserCourse[]) {
+  const result: Record<string, { completed: number; planned: number; courses: { completed: Course[]; planned: Course[] } }> = {};
+  
+  userCourses.forEach(uc => {
+    const course = courses.find(c => c.id === uc.courseId);
+    if (!course) return;
+
+    const systemName = extractSystemFromCategory(course.category);
+    
+    if (!result[systemName]) {
+      result[systemName] = { 
+        completed: 0, 
+        planned: 0, 
+        courses: { completed: [], planned: [] }
+      };
+    }
+    
+    // ステータス別の処理...
+  });
+  
+  return result;
+}
+```
+
+## エラーハンドリングパターン
+
+### JSONデータアクセス時の安全な処理
+```typescript
+// 危険：存在しないプロパティへのアクセス
+const requirements = requirementsData.graduationRequirements; // undefined
+
+// 安全：実際の構造に基づくアクセス  
+const requirements = requirementsData.graduationRequirement;
+```
+
+### オプショナルプロパティの安全な処理
+```typescript
+// 危険：nullチェックなし
+function processCourse(course: Course) {
+  return course.department.toLowerCase(); // エラーの可能性
+}
+
+// 安全：適切なnullチェック
+function processCourse(course: Course) {
+  return course.department?.toLowerCase() || 'unknown';
+}
+```
+
+### 配列操作の安全な処理
+```typescript
+// 危険：配列の存在チェックなし
+requirements.map(req => processRequirement(req));
+
+// 安全：存在確認付き
+requirements?.map(req => processRequirement(req)) || [];
+```
+
+## 📝 開発時のベストプラクティス
+
+### 1. 定期的な型チェック
+```bash
+# TypeScriptコンパイルを定期的に実行
+npm run build
+
+# 型エラーのみをチェック
+npx tsc --noEmit
+```
+
+### 2. 段階的な型強化
+```typescript
+// Phase 1: 基本的な型を設定
+interface BasicCourse {
+  id: string;
+  name: string;
+  credits: number;
+}
+
+// Phase 2: オプショナルプロパティを追加
+interface Course extends BasicCourse {
+  department?: string;
+  notes?: string;
+}
+
+// Phase 3: より詳細な型制約を追加
+interface StrictCourse extends Course {
+  id: `${string}-${string}-${number}`; // 科目コードのパターン
+  credits: 1 | 2 | 4 | 6; // 許可される単位数のみ
+}
+```
+
+### 3. エラーハンドリングの強化
+```typescript
+// 型安全なエラーハンドリング
+function calculateCredits(courses: Course[], userCourses: UserCourse[]): number {
+  try {
+    if (!Array.isArray(courses) || !Array.isArray(userCourses)) {
+      throw new Error('Invalid input: expected arrays');
+    }
+    
+    return userCourses.reduce((total, uc) => {
+      const course = courses.find(c => c.id === uc.courseId);
+      if (!course) {
+        console.warn(`Course not found: ${uc.courseId}`);
+        return total;
+      }
+      
+      return total + (course.credits || 0);
+    }, 0);
+  } catch (error) {
+    console.error('Error calculating credits:', error);
+    return 0; // 安全なデフォルト値
+  }
+}
+```
+
+## ユーティリティ関数の管理
+
+### [utils.ts](mdc:app/lib/utils.ts)での関数分類
+- **データ変換**: extractSystemFromCategory, getCategoryColor
+- **計算処理**: calculateCreditsBySystem, getProgressPercentage  
+- **フィルタリング**: filterCourses, sortCourses
+- **状態管理**: getUserCourseStatus, getStatusText
+
+### 新しいユーティリティ関数追加時の指針
+1. 機能別にコメントでセクション分け
+2. 型安全性を確保（型注釈必須）
+3. エラーハンドリングを適切に実装
+4. JSDocコメントで用途を明記
+
+## パフォーマンス考慮事項
+
+### 重い処理の最適化
+```typescript
+// 系別集計などの計算量の多い処理
+const systemCredits = useMemo(() => 
+  calculateCreditsBySystem(courses, userCourses), 
+  [courses, userCourses]
+);
+```
+
+### 状態管理での依存配列の適切な設定
+```typescript
+// フィルタ処理の最適化
+const filteredCourses = useMemo(() => 
+  filterCourses(courses, filter), 
+  [courses, filter]  // 必要な依存関係のみ
+);
+```
+
+## データ整合性の維持
+
+### 新機能追加時の整合性チェック
+1. 型定義の更新（[types.ts](mdc:app/lib/types.ts)）
+2. フィルタ機能の更新（SearchFilter型の拡張）
+3. ユーティリティ関数の更新（[utils.ts](mdc:app/lib/utils.ts)）
+4. JSONデータとの整合性確認
+
+### データ構造変更時の影響範囲
+- コンポーネントのプロップス型
+- ユーティリティ関数の引数・戻り値型
+- ローカルストレージのデータバージョン
+- APIレスポンスの型定義
+
+## 🧪 テスト戦略
+
+### 型安全性のテスト例
+```typescript
+// 型の整合性をテストする例
+describe('Type Safety', () => {
+  test('courses.json matches Course type', () => {
+    const courses = coursesData.courses as Course[];
+    
+    courses.forEach(course => {
+      expect(typeof course.id).toBe('string');
+      expect(typeof course.name).toBe('string');
+      expect(typeof course.credits).toBe('number');
+      
+      // オプショナルプロパティのテスト
+      if (course.department) {
+        expect(typeof course.department).toBe('string');
+      }
+    });
+  });
+});
+```
+
+## プロジェクト固有データ仕様
+
+### 🎯 系別機能の実装パターン（2024年12月27日実装）
+- **系名抽出**: `extractSystemFromCategory()`でカテゴリから系名を抽出
+- **系別集計**: `calculateCreditsBySystem()`で系別の単位数と科目一覧を計算
+- **フィルタ統合**: `SearchFilter`に`system`フィールドを追加し、検索機能と統合
+- **UI設計**: 展開/折りたたみ機能で詳細表示、色分けで履修状況を視覚化
+
+### ⚠️ 重要：データ構造と型定義の整合性
+2024年12月27日のバグ修正から得られた教訓：
+- JSONデータの構造変更時は必ず対応する型定義も更新する
+- `requirements.json`では`graduationRequirement`（単数形）を使用
+- `Course`型の`department`プロパティはオプショナル（`department?: string`）
+- 型アサーション（`as Course[]`）を使用してJSONデータの型問題を解決
+
+## 利用可能な系一覧
+現在のシステムで管理している学問分野（系）：
+- 人文科学系
+- 社会科学系  
+- 自然科学系
+- 語学系A
+- 健康とスポーツ系
+- キャリアデザイン系
+- 情報・メディア系
+- 数理情報系
+
+## 📚 参考リンク
+- [TypeScript Handbook - Type Guards](mdc:https:/www.typescriptlang.org/docs/handbook/2/narrowing.html)
+- [TypeScript Deep Dive - Type Assertion](mdc:https:/basarat.gitbook.io/typescript/type-system/type-assertion)
+- [React TypeScript Cheatsheet](mdc:https:/react-typescript-cheatsheet.netlify.app)
+
+---
+**最終更新**: 2024年12月27日  
+**バージョン**: 2.0.0 (統合版)

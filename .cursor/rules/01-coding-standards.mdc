@@ -44,14 +44,62 @@ if (course.department) {
 }
 ```
 
-### 2. 命名規則
+### 2. 型安全性のベストプラクティス
+
+#### JSONデータの安全な読み込み
+```typescript
+// ファイル：page.tsx
+import coursesData from './lib/data/courses.json';
+
+// 型アサーションで型安全性を確保
+const [courses] = useState<Course[]>(coursesData.courses as Course[]);
+```
+
+#### 型ガードの活用
+```typescript
+function isCourse(obj: any): obj is Course {
+  return obj && 
+         typeof obj.id === 'string' && 
+         typeof obj.name === 'string' &&
+         typeof obj.credits === 'number';
+}
+
+// 使用例
+if (isCourse(data)) {
+  // data は Course 型として安全に使用可能
+  console.log(data.credits);
+}
+```
+
+#### 安全な配列処理
+```typescript
+function processUserCourses(courses: Course[], userCourses: UserCourse[]): ProcessedCourse[] {
+  if (!courses || !userCourses) {
+    return [];
+  }
+  
+  return userCourses
+    .map(uc => {
+      const course = courses.find(c => c.id === uc.courseId);
+      if (!course) return null; // 見つからない場合の安全な処理
+      
+      return {
+        ...course,
+        status: uc.status
+      };
+    })
+    .filter((course): course is ProcessedCourse => course !== null);
+}
+```
+
+### 3. 命名規則
 - **ファイル名**: kebab-case（例：course-search.tsx）
 - **コンポーネント名**: PascalCase（例：CourseSearch）
 - **関数名・変数名**: camelCase（例：handleSubmit, userName）
 - **定数**: SCREAMING_SNAKE_CASE（例：MAX_CREDITS_PER_YEAR）
 - **型名**: PascalCase（例：Course, UserCourse）
 
-### 3. インポート順序
+### 4. インポート順序
 ```typescript
 // 1. React関連
 import { useState, useEffect } from 'react';
@@ -105,19 +153,19 @@ import CourseItem from './CourseItem';
 - モバイルファーストで設計
 - ブレイクポイント：sm(640px), md(768px), lg(1024px), xl(1280px)
 
-### 3. カラーパレット
-```typescript
-// プライマリカラー
-'bg-blue-600' // メインアクション
-'bg-green-600' // 成功・完了
-'bg-red-600' // エラー・警告
-'bg-orange-600' // 注意
+### 3. カラーパレット統一
+```css
+/* プライマリカラー */
+bg-blue-600    /* メインアクション・検索 */
+bg-green-600   /* 成功・履修済み */
+bg-red-600     /* エラー・警告 */
+bg-orange-600  /* 注意・履修予定 */
 
-// セカンダリカラー
-'bg-gray-50' // 背景
-'bg-gray-100' // カード背景
-'bg-gray-600' // テキスト
-'bg-gray-800' // 強調テキスト
+/* セカンダリカラー */
+bg-gray-50     /* 背景 */
+bg-gray-100    /* カード背景 */
+bg-gray-600    /* テキスト */
+bg-gray-800    /* 強調テキスト */
 ```
 
 ## データ処理規約

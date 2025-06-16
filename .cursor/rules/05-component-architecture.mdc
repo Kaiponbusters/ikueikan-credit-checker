@@ -1,0 +1,375 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# コンポーネント設計・アーキテクチャ
+
+## 機能別ディレクトリ構造
+
+### メイン構造
+```
+app/components/
+├── course-search/          # 科目検索機能
+├── course-list/            # 科目一覧表示機能  
+├── credit-summary/         # 単位集計・進捗表示機能
+└── index.ts               # メインエクスポート
+```
+
+### 各機能ディレクトリの構成
+```
+feature-directory/
+├── MainComponent.tsx      # メインコンポーネント（エントリポイント）
+├── SubComponent1.tsx      # サブコンポーネント1
+├── SubComponent2.tsx      # サブコンポーネント2
+└── index.ts              # エクスポート管理
+```
+
+## コンポーネント分割基準
+
+### サイズベースの分割判断
+- **100行未満**: 分割不要
+- **100-200行**: 分割検討
+- **200行超**: 必須分割対象
+- **300行超**: 即座に分割実行
+
+### 責務ベースの分割基準
+1. **データ処理**: ロジック部分
+2. **UI表示**: 表示部分
+3. **インタラクション**: ユーザー操作部分
+4. **状態管理**: 状態更新部分
+
+### 成功事例: CreditSummary.tsx
+**分割前**: 316行のモノリシックコンポーネント
+**分割後**: 
+- CreditSummary.tsx (17行) - メインエントリポイント
+- OverallProgress.tsx (67行) - 総合進捗表示
+- CategoryProgress.tsx (37行) - カテゴリ別進捗
+- SystemProgress.tsx (119行) - 系別進捗
+- DepartmentProgress.tsx (35行) - 学部別単位数
+- WarningsSection.tsx (54行) - 警告表示
+
+## エクスポート・インポート規則
+
+### エクスポート管理
+```typescript
+// feature/index.ts での統一エクスポート
+export { default as MainComponent } from './MainComponent';
+export { default as SubComponent } from './SubComponent';
+
+// app/components/index.ts でのメインエクスポート  
+export * from './course-search';
+export * from './course-list';
+export * from './credit-summary';
+```
+
+### インポート規則
+```typescript
+// ❌ 避ける: 個別コンポーネントの直接インポート
+import CourseSearch from './components/course-search/CourseSearch';
+
+// ✅ 推奨: index.tsを通じたインポート
+import { CourseSearch } from './components/course-search';
+
+// ✅ または: メインインデックスからのインポート
+import { CourseSearch } from './components';
+```
+
+### 相対パス管理
+```typescript
+// ライブラリ・ユーティリティへの統一パス
+import { Course, UserCourse } from '../../lib/types';
+import { filterCourses } from '../../lib/utils';
+import { saveUserData } from '../../lib/storage';
+```
+
+## コンポーネント命名規則
+
+### 接尾辞パターン
+```typescript
+// UI表示コンポーネント
+OverallProgress      // Progress: 進捗表示
+CategoryProgress     
+SystemProgress
+
+// フォーム関連
+BasicSearchFields    // Fields: 入力フィールド群
+AdvancedSearchFields
+
+// アクション関連  
+SearchFormActions    // Actions: ボタン・操作群
+FormActions
+
+// セクション関連
+WarningsSection      // Section: 独立したセクション
+HeaderSection
+```
+
+### ファイル命名
+- **PascalCase**: コンポーネントファイル (CourseSearch.tsx)
+- **camelCase**: ユーティリティファイル (utils.ts)
+- **kebab-case**: ディレクトリ名 (course-search/)
+
+## プロップス設計パターン
+
+### 必須プロップスの型定義
+```typescript
+interface ComponentProps {
+  // 必須データ
+  courses: Course[];
+  userCourses: UserCourse[];
+  
+  // コールバック関数
+  onUpdate: (data: UpdateData) => void;
+  
+  // オプショナル設定
+  showDetails?: boolean;
+  className?: string;
+}
+```
+
+### プロップスドリリングの回避
+```typescript
+// ❌ 避ける: 深いプロップスドリリング
+<Parent>
+  <Child1 data={data} onUpdate={onUpdate}>
+    <Child2 data={data} onUpdate={onUpdate}>
+      <Child3 data={data} onUpdate={onUpdate} />
+    </Child2>
+  </Child1>
+</Parent>
+
+// ✅ 推奨: 適切な責務分割
+<Parent>
+  <DataProvider data={data} onUpdate={onUpdate}>
+    <Child1 />
+    <Child2 />
+    <Child3 />
+  </DataProvider>
+</Parent>
+```
+
+## パフォーマンス最適化パターン
+
+### useMemoの活用
+```typescript
+// 計算量の多いデータ処理
+const systemCredits = useMemo(() => 
+  calculateCreditsBySystem(courses, userCourses), 
+  [courses, userCourses]
+);
+
+// フィルタリング処理
+const filteredCourses = useMemo(() => 
+  filterCourses(courses, filter), 
+  [courses, filter]
+);
+```
+
+### useCallbackの活用
+```typescript
+// 子コンポーネントに渡すコールバック
+const handleSystemToggle = useCallback((systemName: string) => {
+  setExpandedSystems(prev => ({
+    ...prev,
+    [systemName]: !prev[systemName]
+  }));
+}, []);
+
+// イベントハンドラー
+const handleCourseUpdate = useCallback((courseId: string, status: CourseStatus) => {
+  onCourseUpdate(courseId, status);
+}, [onCourseUpdate]);
+```
+
+### コンポーネントメモ化
+```typescript
+// React.memoでの不要レンダリング防止
+const CourseItem = React.memo<CourseItemProps>(({ course, onUpdate }) => {
+  return (
+    <div className="course-item">
+      {/* コンポーネント内容 */}
+    </div>
+  );
+});
+
+CourseItem.displayName = 'CourseItem';
+```
+
+## 状態管理パターン
+
+### ローカル状態 vs グローバル状態
+```typescript
+// ✅ ローカル状態: UI状態（展開/折りたたみ等）
+const [expanded, setExpanded] = useState(false);
+const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+// ✅ グローバル状態: アプリケーション状態（履修データ等）
+const [userCourses, setUserCourses] = useState<UserCourse[]>([]);
+```
+
+### 複合状態の管理
+```typescript
+// 関連する状態をオブジェクトでまとめる
+const [filter, setFilter] = useState<SearchFilter>({
+  keyword: '',
+  category: '',
+  system: '',
+  creditsMin: undefined,
+  creditsMax: undefined
+});
+
+// 更新時は適切にスプレッド
+const updateFilter = useCallback((updates: Partial<SearchFilter>) => {
+  setFilter(prev => ({ ...prev, ...updates }));
+}, []);
+```
+
+## エラーハンドリングパターン
+
+### コンポーネントレベルのエラーハンドリング
+```typescript
+const ComponentWithErrorHandling: React.FC<Props> = ({ data }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="p-4 text-center text-gray-500">
+        データがありません
+      </div>
+    );
+  }
+
+  try {
+    return (
+      <div>
+        {/* メインコンテンツ */}
+      </div>
+    );
+  } catch (error) {
+    console.error('Component render error:', error);
+    return (
+      <div className="p-4 text-center text-red-500">
+        表示エラーが発生しました
+      </div>
+    );
+  }
+};
+```
+
+### Error Boundaryの実装
+```typescript
+class ComponentErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Component error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallback />;
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+## テスタビリティの向上
+
+### テストしやすいコンポーネント設計
+```typescript
+// ✅ 推奨: ピュアなコンポーネント
+interface PureComponentProps {
+  data: ProcessedData;  // 事前処理済みデータ
+  onAction: (id: string) => void;  // コールバック関数
+}
+
+const PureComponent: React.FC<PureComponentProps> = ({ data, onAction }) => {
+  // UIロジックのみ、副作用なし
+  return <div>{/* レンダリング */}</div>;
+};
+
+// ❌ 避ける: 副作用の多いコンポーネント
+const ComponentWithSideEffects = () => {
+  useEffect(() => {
+    // 複数のAPI呼び出し
+    // ローカルストレージ操作
+    // DOM操作
+  }, []);
+};
+```
+
+### data-testid の追加
+```typescript
+// E2Eテスト用のテストID
+<button 
+  data-testid="course-search-submit"
+  onClick={handleSubmit}
+>
+  検索実行
+</button>
+
+<div data-testid="course-list-container">
+  {courses.map(course => (
+    <div key={course.id} data-testid={`course-item-${course.id}`}>
+      {course.name}
+    </div>
+  ))}
+</div>
+```
+
+## 型安全性の確保
+
+### 厳密なプロップス型定義
+```typescript
+// 具体的な型制約
+interface StrictComponentProps {
+  courseId: `${string}-${string}-${number}`;  // 科目IDパターン
+  status: 'completed' | 'planned' | 'dropped';  // 限定値
+  credits: 1 | 2 | 4 | 6;  // 許可される単位数
+  onStatusChange: (newStatus: CourseStatus) => Promise<void>;  // 非同期処理
+}
+
+// ジェネリック型の活用
+interface ListComponentProps<T> {
+  items: T[];
+  renderItem: (item: T) => React.ReactNode;
+  keyExtractor: (item: T) => string;
+}
+```
+
+## 将来の拡張性
+
+### プラグイン式コンポーネント設計
+```typescript
+// 拡張可能なコンポーネント設計
+interface ExtensibleComponentProps {
+  baseData: BaseData;
+  plugins?: ComponentPlugin[];  // プラグイン機能
+  customRenderers?: CustomRenderers;  // カスタムレンダラー
+}
+
+// 設定駆動のコンポーネント
+interface ConfigurableComponentProps {
+  config: ComponentConfig;
+  data: any[];
+  theme?: ThemeConfig;
+}
+```
+
+### 国際化対応
+```typescript
+// 多言語対応の準備
+interface InternationalComponentProps {
+  locale: 'ja' | 'en';
+  messages: Record<string, string>;
+  formatters: LocaleFormatters;
+}
+```

@@ -1,0 +1,474 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# デバッグ・トラブルシューティングガイド
+
+## 概要
+育英館大学単位管理システム開発において、実際に発生した問題とその解決方法をまとめたガイドです。効率的なデバッグ手法と予防策を提供します。
+
+## 🚨 重要エラーパターンと解決方法
+
+### 1. Runtime Error: 型不整合エラー（2024年12月27日発生）
+
+#### 問題の症状
+- TypeScriptビルドは成功するが、ランタイムでundefinedエラーが発生
+- JSONデータとTypeScript型定義の不整合が原因
+
+#### 具体例
+```typescript
+// 問題のあるコード
+const requirements = requirementsData.graduationRequirements; // undefined になる
+
+// 実際のJSONの構造
+{
+  "graduationRequirement": { ... }  // 単数形
+}
+```
+
+#### 解決手順
+1. **JSON構造の確認**: 実際のデータファイルを直接確認
+2. **型定義の修正**: 実際の構造に合わせて型を更新
+3. **型アサーションの使用**: `as Type[]` で型を明示
+4. **nullチェックの追加**: オプショナルプロパティの安全な処理
+
+#### 解決例
+```typescript
+// 修正後のコード
+const requirements = requirementsData.graduationRequirement; // 正しいプロパティ名
+
+// オプショナルプロパティの安全な処理
+function processCourse(course: Course) {
+  return course.department?.toLowerCase() || 'unknown';
+}
+```
+
+### 2. Webpack Hot Reload Error
+
+#### 問題の症状
+```
+Error: Cannot find module './447.js'
+ChunkLoadError: Loading chunk 447 failed
+```
+
+#### 解決手順
+```bash
+# 1. .nextディレクトリの削除
+Remove-Item -Recurse -Force .next
+
+# 2. 依存関係の再インストール（必要に応じて）
+npm ci
+
+# 3. 再ビルド
+npm run build
+
+# 4. 開発サーバー再起動
+npm run dev
+```
+
+### 3. TypeScript Import Path Error
+
+#### 問題の症状
+- `Cannot find module '../../../lib/types'` エラー
+- コンポーネント移動後の相対パス不整合
+
+#### 解決手順
+1. **相対パスの再計算**: ファイル構造を確認
+2. **インポート文の修正**: 正しいパスに更新
+3. **IDEの自動修正機能の活用**: VSCodeのオートインポート
+
+#### 正しいパス例
+```typescript
+// app/components/course-search/CourseSearch.tsx から
+import { Course, UserCourse } from '../../lib/types';        // ✅ 正しい
+import { Course, UserCourse } from '../../../lib/types';     // ❌ 間違い
+```
+
+### 4. Component Not Rendering
+
+#### 問題の症状
+- TypeScriptエラーはないが、コンポーネントが表示されない
+- 白いページや部分的に欠ける表示
+
+#### チェックポイント
+1. **`'use client'` ディレクティブ**: Clientコンポーネントに必須
+2. **エクスポート方式**: `export default` の確認
+3. **インポート名**: named import vs default import
+4. **条件レンダリング**: 条件が満たされているか確認
+
+#### デバッグ例
+```typescript
+// 1. use clientの確認
+'use client';  // これが必要
+
+// 2. エクスポート方式の確認
+export default function CourseSearch() {  // default export
+  return <div>Content</div>;
+}
+
+// 3. インポート方式の確認
+import CourseSearch from './CourseSearch';  // default import
+// または
+import { CourseSearch } from './index';    // named import (index.tsでre-export)
+```
+
+## 🔍 効率的なデバッグ手法
+
+### 1. 段階的な問題切り分け
+
+#### レベル1: TypeScript レベル
+```bash
+# TypeScript コンパイルチェック
+npx tsc --noEmit
+
+# より詳細なエラー情報
+npx tsc --noEmit --pretty
+```
+
+#### レベル2: ビルド レベル
+```bash
+# Next.js ビルドチェック
+npm run build
+
+# 詳細なビルド情報
+npm run build -- --debug
+```
+
+#### レベル3: ランタイム レベル
+```typescript
+// console.logでのデバッグ
+console.log('Data:', data);
+console.log('Type:', typeof data);
+console.log('Length:', data?.length);
+
+// 条件付きログ
+if (process.env.NODE_ENV === 'development') {
+  console.log('Debug info:', debugData);
+}
+```
+
+### 2. React DevTools の活用
+
+#### Props とState の確認
+1. React DevTools をインストール
+2. コンポーネント階層の確認
+3. Props の内容確認
+4. State の変化追跡
+
+#### パフォーマンス分析
+1. Profiler タブで再レンダリング確認
+2. 重い処理の特定
+3. useMemo/useCallback の効果確認
+
+### 3. ネットワーク・データ確認
+
+#### ローカルストレージ確認
+```typescript
+// ブラウザコンソールで実行
+localStorage.getItem('ikueikan-user-data');
+
+// データの形式確認
+JSON.parse(localStorage.getItem('ikueikan-user-data') || '{}');
+```
+
+#### JSONデータ確認
+```bash
+# JSONファイルの構造確認
+cat app/lib/data/courses.json | jq '.courses[0]'
+cat app/lib/data/requirements.json | jq keys
+```
+
+## 🧪 テスト駆動デバッグ
+
+### 1. 単体テストでの問題特定
+
+#### ユーティリティ関数のテスト
+```typescript
+// utils.test.ts
+import { extractSystemFromCategory, calculateCreditsBySystem } from '../lib/utils';
+
+describe('extractSystemFromCategory', () => {
+  test('正常なカテゴリからの系名抽出', () => {
+    const result = extractSystemFromCategory('情報・メディア系(Information and Media)');
+    expect(result).toBe('情報・メディア系');
+  });
+
+  test('英語部分がない場合', () => {
+    const result = extractSystemFromCategory('情報・メディア系');
+    expect(result).toBe('情報・メディア系');
+  });
+});
+```
+
+#### コンポーネントのテスト
+```typescript
+// CourseSearch.test.tsx
+import { render, screen } from '@testing-library/react';
+import CourseSearch from '../components/CourseSearch';
+
+test('検索フォームが正しく表示される', () => {
+  const mockProps = {
+    courses: [],
+    onSearchResults: jest.fn()
+  };
+  
+  render(<CourseSearch {...mockProps} />);
+  
+  expect(screen.getByPlaceholderText('科目名で検索')).toBeInTheDocument();
+});
+```
+
+### 2. E2Eテストでの統合確認
+
+#### Playwright MCPパターン
+```typescript
+// E2Eテスト例
+test('科目検索と履修登録の統合テスト', async ({ page }) => {
+  // 1. ページロード
+  await page.goto('http://localhost:3000');
+  
+  // 2. 検索実行
+  await page.fill('[data-testid="search-keyword"]', '情報');
+  await page.click('[data-testid="search-submit"]');
+  
+  // 3. 結果確認
+  await expect(page.locator('[data-testid="course-list"]')).toBeVisible();
+  
+  // 4. 履修登録
+  await page.click('[data-testid="course-item-first"] [data-testid="register-button"]');
+  
+  // 5. 状態確認
+  await expect(page.locator('[data-testid="course-status-completed"]')).toBeVisible();
+});
+```
+
+## 📊 パフォーマンス問題のデバッグ
+
+### 1. 重い計算処理の特定
+
+#### React Profiler での測定
+```typescript
+// パフォーマンス測定用のコンポーネント
+import { Profiler } from 'react';
+
+function onRenderCallback(id: string, phase: string, actualDuration: number) {
+  if (actualDuration > 100) {  // 100ms以上の重い処理を検出
+    console.warn(`Slow render detected: ${id} took ${actualDuration}ms`);
+  }
+}
+
+<Profiler id="CourseList" onRender={onRenderCallback}>
+  <CourseList courses={courses} />
+</Profiler>
+```
+
+#### useMemo の効果確認
+```typescript
+// 前: メモ化なし
+const systemCredits = calculateCreditsBySystem(courses, userCourses);
+
+// 後: メモ化あり
+const systemCredits = useMemo(() => 
+  calculateCreditsBySystem(courses, userCourses), 
+  [courses, userCourses]
+);
+
+// デバッグログで再計算回数を確認
+const systemCredits = useMemo(() => {
+  console.log('Recalculating system credits');
+  return calculateCreditsBySystem(courses, userCourses);
+}, [courses, userCourses]);
+```
+
+### 2. 無限レンダリングの回避
+
+#### よくある原因と対策
+```typescript
+// ❌ 問題: オブジェクトを直接依存配列に入れる
+useEffect(() => {
+  // 処理
+}, [filter]); // filter オブジェクトは毎回新しいため無限ループ
+
+// ✅ 解決: 値のみを依存配列に入れる
+useEffect(() => {
+  // 処理
+}, [filter.keyword, filter.category]); // プリミティブ値のみ
+
+// ✅ または: useMemoでオブジェクトをメモ化
+const memoizedFilter = useMemo(() => filter, [filter.keyword, filter.category]);
+useEffect(() => {
+  // 処理
+}, [memoizedFilter]);
+```
+
+## 🛠️ 開発環境の問題解決
+
+### 1. サーバー重複起動問題
+
+#### 問題確認
+```bash
+# ポート使用状況の確認
+netstat -an | findstr :3000
+
+# プロセス確認
+tasklist | findstr node
+```
+
+#### 解決方法
+```bash
+# プロセス終了（Windows）
+taskkill /f /im node.exe
+
+# プロセス終了（Mac/Linux）
+killall node
+
+# または特定のポートを使用しているプロセスを終了
+npx kill-port 3000
+```
+
+### 2. 依存関係の問題
+
+#### package-lock.json の問題
+```bash
+# キャッシュクリア
+npm cache clean --force
+
+# lock ファイル削除と再インストール
+rm package-lock.json
+rm -rf node_modules
+npm install
+```
+
+#### Node.js バージョン問題
+```bash
+# 現在のバージョン確認
+node --version
+npm --version
+
+# 推奨バージョン: Node.js 18.x or 20.x
+# Next.js 14 との互換性確認
+```
+
+## 📝 デバッグログの効果的な使用
+
+### 1. 階層的ログレベル
+
+#### 本番環境での安全なログ
+```typescript
+const DEBUG = process.env.NODE_ENV === 'development';
+
+// レベル別ログ関数
+const log = {
+  error: (message: string, data?: any) => {
+    console.error(`[ERROR] ${message}`, data);
+  },
+  warn: (message: string, data?: any) => {
+    console.warn(`[WARN] ${message}`, data);
+  },
+  info: (message: string, data?: any) => {
+    if (DEBUG) console.info(`[INFO] ${message}`, data);
+  },
+  debug: (message: string, data?: any) => {
+    if (DEBUG) console.log(`[DEBUG] ${message}`, data);
+  }
+};
+
+// 使用例
+log.debug('Filter updated', { filter, resultCount: filteredCourses.length });
+log.warn('Course not found', { courseId });
+log.error('Failed to save user data', { error });
+```
+
+### 2. データフロー追跡
+
+#### プロップスの流れ確認
+```typescript
+// HOC パターンでプロップス追跡
+function withPropsLogging<T>(Component: React.ComponentType<T>, componentName: string) {
+  return function LoggedComponent(props: T) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`${componentName} received props:`, props);
+    }
+    return <Component {...props} />;
+  };
+}
+
+// 使用例
+const LoggedCourseSearch = withPropsLogging(CourseSearch, 'CourseSearch');
+```
+
+## 🎯 予防的デバッグ戦略
+
+### 1. 型安全性の強化
+
+#### 厳密な型チェック
+```typescript
+// tsconfig.json での厳密設定
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true
+  }
+}
+```
+
+#### Runtime 型チェック
+```typescript
+// 型ガード関数
+function isCourse(obj: any): obj is Course {
+  return obj && 
+         typeof obj.id === 'string' && 
+         typeof obj.name === 'string' &&
+         typeof obj.credits === 'number';
+}
+
+// 使用例
+if (!courses.every(isCourse)) {
+  throw new Error('Invalid course data detected');
+}
+```
+
+### 2. エラーハンドリングの統一
+
+#### Error Boundary の実装
+```typescript
+class ErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // エラーレポーティングサービスに送信
+    console.error('Component error caught:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h2 className="text-red-800 font-semibold">エラーが発生しました</h2>
+          <p className="text-red-600">ページを再読み込みしてお試しください。</p>
+          {process.env.NODE_ENV === 'development' && (
+            <details className="mt-2">
+              <summary>エラー詳細</summary>
+              <pre className="text-xs">{this.state.error?.message}</pre>
+            </details>
+          )}
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+この包括的なデバッグガイドを活用して、効率的な問題解決を行ってください。問題が発生した際は、段階的なアプローチで原因を特定し、適切な解決策を適用することが重要です。
