@@ -62,49 +62,6 @@
 - **卒業要件**: カテゴリ別・系別必要単位数
 - **学習分野**: 8つの専門系統による分類
 
-## 🚀 セットアップ・インストール
-
-### 前提条件
-- **Node.js**: 18.0.0 以上
-- **npm**: 8.0.0 以上 (または yarn/pnpm)
-
-### インストール手順
-
-1. **リポジトリのクローン**
-   ```bash
-   git clone https://github.com/Kaiponbusters/ikueikan-credit-checker.git
-   cd ikueikan-credit-checker
-   ```
-
-2. **依存関係のインストール**
-   ```bash
-   npm install
-   ```
-
-3. **開発サーバーの起動**
-   ```bash
-   npm run dev
-   ```
-
-4. **アプリケーションへのアクセス**
-   ブラウザで [http://localhost:3000](http://localhost:3000) を開く
-
-### その他のコマンド
-
-```bash
-# プロダクションビルド
-npm run build
-
-# プロダクションサーバー起動
-npm start
-
-# リンターによるコードチェック
-npm run lint
-
-# TypeScript型チェック
-npm run type-check
-```
-
 ## 📖 使用方法
 
 ### 1. 科目検索
@@ -194,7 +151,3 @@ ikueikan-credit-checker/
 
 - **プロジェクト**: [ikueikan-credit-checker](https://github.com/Kaiponbusters/ikueikan-credit-checker)
 - **Issue**: [GitHub Issues](https://github.com/Kaiponbusters/ikueikan-credit-checker/issues)
-
----
-
-**育英館大学 単位管理システム** - 効率的な学習計画をサポートします 🎓
